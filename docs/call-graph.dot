@@ -1,0 +1,96 @@
+digraph CallGraph {
+    rankdir=LR;
+    node [shape=box, style=filled, fontname="Arial"];
+    
+    subgraph cluster_api_gateway {
+        label = "API Gateway";
+        style=dashed;
+        color=blue;
+        
+        node [fillcolor="#E6F3FF"];
+        "Gateway: Get Health Check" [label="GET /orders/health-check"];
+        "Gateway: Get All Orders" [label="GET /orders"];
+        "Gateway: Get Order By ID" [label="GET /orders/:id"];
+        "Gateway: Create Order" [label="POST /orders"];
+        "Gateway: Update Order" [label="PUT /orders/:id"];
+        "Gateway: Delete Order" [label="DELETE /orders/:id"];
+
+        "GatewayService: getAllOrders";
+        "GatewayService: getOrderById";
+        "GatewayService: createOrder";
+        "GatewayService: updateOrder";
+        "GatewayService: deleteOrder";
+    }
+
+    subgraph cluster_order_service {
+        label = "Order Management Service";
+        style=dashed;
+        color=green;
+
+        node [fillcolor="#E6FFFA"];
+        "OrderController: handleGetAllOrders";
+        "OrderController: handleGetOrderById";
+        "OrderController: handleCreateOrder";
+        "OrderController: handleUpdateOrder";
+        "OrderController: handleDeleteOrder";
+
+        "OrderService: handleGetAllOrders";
+        "OrderService: handleGetOrderById";
+        "OrderService: handleCreateOrder";
+        "OrderService: handleOrderUpdate";
+        "OrderService: handleDeleteOrder";
+    }
+
+    subgraph cluster_mocks {
+        label = "External Services";
+        style=dashed;
+        color=red;
+
+        node [fillcolor="#FFE6E6"];
+        "Customer Service (Mock)";
+        "Inventory Service (Mock)";
+    }
+    
+    node [fillcolor="#FFF2CC", shape=cylinder];
+    "RabbitMQ";
+    "PostgreSQL";
+
+    // Edges - API Gateway -> Gateway Service
+    "Gateway: Get All Orders" -> "GatewayService: getAllOrders";
+    "Gateway: Get Order By ID" -> "GatewayService: getOrderById";
+    "Gateway: Create Order" -> "GatewayService: createOrder";
+    "Gateway: Update Order" -> "GatewayService: updateOrder";
+    "Gateway: Delete Order" -> "GatewayService: deleteOrder";
+
+    // Edges - Gateway Service -> RabbitMQ
+    "GatewayService: getAllOrders" -> "RabbitMQ" [label="send(GET_ALL_ORDERS)"];
+    "GatewayService: getOrderById" -> "RabbitMQ" [label="send(GET_ORDER_BY_ID)"];
+    "GatewayService: createOrder" -> "RabbitMQ" [label="emit(CREATE_ORDER)"];
+    "GatewayService: updateOrder" -> "RabbitMQ" [label="send(UPDATE_ORDER)"];
+    "GatewayService: deleteOrder" -> "RabbitMQ" [label="send(DELETE_ORDER)"];
+
+    // Edges - RabbitMQ -> Order Controller
+    "RabbitMQ" -> "OrderController: handleGetAllOrders" [label="consumes(GET_ALL_ORDERS)"];
+    "RabbitMQ" -> "OrderController: handleGetOrderById" [label="consumes(GET_ORDER_BY_ID)"];
+    "RabbitMQ" -> "OrderController: handleCreateOrder" [label="consumes(CREATE_ORDER)"];
+    "RabbitMQ" -> "OrderController: handleUpdateOrder" [label="consumes(UPDATE_ORDER)"];
+    "RabbitMQ" -> "OrderController: handleDeleteOrder" [label="consumes(DELETE_ORDER)"];
+
+    // Edges - Order Controller -> Order Service
+    "OrderController: handleGetAllOrders" -> "OrderService: handleGetAllOrders";
+    "OrderController: handleGetOrderById" -> "OrderService: handleGetOrderById";
+    "OrderController: handleCreateOrder" -> "OrderService: handleCreateOrder";
+    "OrderController: handleUpdateOrder" -> "OrderService: handleOrderUpdate";
+    "OrderController: handleDeleteOrder" -> "OrderService: handleDeleteOrder";
+
+    // Edges - Order Service Logic
+    "OrderService: handleGetAllOrders" -> "PostgreSQL" [label="find()"];
+    "OrderService: handleGetOrderById" -> "PostgreSQL" [label="findOne()"];
+    
+    "OrderService: handleCreateOrder" -> "Customer Service (Mock)" [label="send(GET_CUSTOMER_DETAILS)"];
+    "OrderService: handleCreateOrder" -> "Inventory Service (Mock)" [label="send(GET_INVENTORY_DETAILS)"];
+    "OrderService: handleCreateOrder" -> "PostgreSQL" [label="Transaction: save()"];
+    
+    "OrderService: handleOrderUpdate" -> "PostgreSQL" [label="findOne(), save()"];
+    "OrderService: handleDeleteOrder" -> "PostgreSQL" [label="findOne(), remove()"];
+}

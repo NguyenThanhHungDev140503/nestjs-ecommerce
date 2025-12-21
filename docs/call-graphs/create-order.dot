@@ -1,0 +1,50 @@
+digraph CreateOrder {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightblue];
+
+    Client [shape=ellipse, color=green, label="Client"];
+    API_Gateway_Controller [label="OrderManagementController\n(API Gateway)\n@Post()"];
+    API_Gateway_Service [label="OrderManagementService\n(API Gateway)\ncreateOrder()"];
+    RabbitMQ_Event [shape=diamond, color=orange, label="RabbitMQ\nEvent: create_order"];
+    
+    subgraph cluster_OrderService {
+        label = "Order Management Service";
+        style=dashed;
+        Order_Service_Controller [label="OrderManagementController\n@EventPattern(CREATE_ORDER)"];
+        Order_Service_Service [label="OrderManagementService\nhandleCreateOrder()"];
+        
+        Customer_Proxy [label="ClientProxy\n(Customer Service)"];
+        Inventory_Proxy [label="ClientProxy\n(Inventory Service)"];
+        
+        DB_Transaction [shape=note, color=yellow, label="DB Transaction\n(Start)"];
+        DB_Save_Order [shape=cylinder, color=grey, label="PostgreSQL\n(Save Order)"];
+        DB_Save_Items [shape=cylinder, color=grey, label="PostgreSQL\n(Save Line Items)"];
+        DB_Commit [shape=note, color=yellow, label="DB Transaction\n(Commit)"];
+    }
+
+    RabbitMQ_RPC_Cust [shape=diamond, color=orange, label="RabbitMQ\nRPC: get_cust_details"];
+    RabbitMQ_RPC_Inv [shape=diamond, color=orange, label="RabbitMQ\nRPC: get_inv_details"];
+
+    Client -> API_Gateway_Controller [label="POST /orders"];
+    API_Gateway_Controller -> API_Gateway_Service [label="createOrder()"];
+    API_Gateway_Service -> RabbitMQ_Event [label="ClientProxy.emit()"];
+    API_Gateway_Service -> API_Gateway_Controller [label="Return 'Order Created'"];
+    API_Gateway_Controller -> Client [label="HTTP 201 Created"];
+
+    RabbitMQ_Event -> Order_Service_Controller [label="Consume Event"];
+    Order_Service_Controller -> Order_Service_Service [label="handleCreateOrder()"];
+    
+    Order_Service_Service -> Customer_Proxy [label="Get Customer Info"];
+    Customer_Proxy -> RabbitMQ_RPC_Cust [label="Send Request"];
+    RabbitMQ_RPC_Cust -> Customer_Proxy [label="Return Details"];
+    
+    Order_Service_Service -> Inventory_Proxy [label="Get Inventory Info"];
+    Inventory_Proxy -> RabbitMQ_RPC_Inv [label="Send Request"];
+    RabbitMQ_RPC_Inv -> Inventory_Proxy [label="Return Details"];
+
+    Order_Service_Service -> DB_Transaction [label="Start"];
+    DB_Transaction -> DB_Save_Order [label="Save Order"];
+    DB_Save_Order -> DB_Save_Items [label="Save Items"];
+    DB_Save_Items -> DB_Commit [label="Commit"];
+    DB_Commit -> Order_Service_Service [label="Success"];
+}

@@ -1,0 +1,10 @@
+digraph HealthCheck {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightblue];
+
+    Client [shape=ellipse, color=green, label="Client"];
+    API_Gateway_Controller [label="OrderManagementController\n(API Gateway)\n@Get('health-check')"];
+
+    Client -> API_Gateway_Controller [label="GET /orders/health-check"];
+    API_Gateway_Controller -> Client [label="HTTP 200 OK\n(Static Response)"];
+}

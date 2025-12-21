@@ -1,0 +1,31 @@
+digraph DeleteOrder {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightblue];
+
+    Client [shape=ellipse, color=green, label="Client"];
+    API_Gateway_Controller [label="OrderManagementController\n(API Gateway)\n@Delete(':id')"];
+    API_Gateway_Service [label="OrderManagementService\n(API Gateway)\ndeleteOrder()"];
+    RabbitMQ [shape=diamond, color=orange, label="RabbitMQ\nTopic: delete_order"];
+    
+    Order_Service_Controller [label="OrderManagementController\n(Order Service)\n@MessagePattern(DELETE_ORDER)"];
+    Order_Service_Service [label="OrderManagementService\n(Order Service)\nhandleDeleteOrder()"];
+    Database [shape=cylinder, color=grey, label="PostgreSQL\n(Orders Table)"];
+
+    Client -> API_Gateway_Controller [label="DELETE /orders/:id"];
+    API_Gateway_Controller -> API_Gateway_Service [label="deleteOrder()"];
+    API_Gateway_Service -> RabbitMQ [label="ClientProxy.send()"];
+    
+    RabbitMQ -> Order_Service_Controller [label="Consume Message"];
+    Order_Service_Controller -> Order_Service_Service [label="handleDeleteOrder()"];
+    
+    Order_Service_Service -> Database [label="FindOne(id)"];
+    Database -> Order_Service_Service [label="Return Order"];
+    Order_Service_Service -> Database [label="Remove(order)"];
+    Database -> Order_Service_Service [label="Confirm Deletion"];
+    
+    Order_Service_Service -> Order_Service_Controller [label="Return Message"];
+    Order_Service_Controller -> RabbitMQ [label="Return Response"];
+    RabbitMQ -> API_Gateway_Service [label="Return Response"];
+    API_Gateway_Service -> API_Gateway_Controller [label="Return Data"];
+    API_Gateway_Controller -> Client [label="HTTP 200 OK"];
+}

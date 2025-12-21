@@ -1,0 +1,32 @@
+digraph UpdateOrder {
+    rankdir=LR;
+    node [shape=box, style=filled, color=lightblue];
+
+    Client [shape=ellipse, color=green, label="Client"];
+    API_Gateway_Controller [label="OrderManagementController\n(API Gateway)\n@Put(':id')"];
+    API_Gateway_Service [label="OrderManagementService\n(API Gateway)\nupdateOrder()"];
+    RabbitMQ [shape=diamond, color=orange, label="RabbitMQ\nTopic: update_order"];
+    
+    Order_Service_Controller [label="OrderManagementController\n(Order Service)\n@MessagePattern(UPDATE_ORDER)"];
+    Order_Service_Service [label="OrderManagementService\n(Order Service)\nhandleOrderUpdate()"];
+    Database [shape=cylinder, color=grey, label="PostgreSQL\n(Orders Table)"];
+
+    Client -> API_Gateway_Controller [label="PUT /orders/:id"];
+    API_Gateway_Controller -> API_Gateway_Service [label="updateOrder()"];
+    API_Gateway_Service -> RabbitMQ [label="ClientProxy.send()"];
+    
+    RabbitMQ -> Order_Service_Controller [label="Consume Message"];
+    Order_Service_Controller -> Order_Service_Service [label="handleOrderUpdate()"];
+    
+    Order_Service_Service -> Database [label="FindOne(id)"];
+    Database -> Order_Service_Service [label="Return Order"];
+    Order_Service_Service -> Order_Service_Service [label="Update Fields"];
+    Order_Service_Service -> Database [label="Save(order)"];
+    Database -> Order_Service_Service [label="Return Updated Order"];
+    
+    Order_Service_Service -> Order_Service_Controller [label="Return"];
+    Order_Service_Controller -> RabbitMQ [label="Return Response"];
+    RabbitMQ -> API_Gateway_Service [label="Return Response"];
+    API_Gateway_Service -> API_Gateway_Controller [label="Return Data"];
+    API_Gateway_Controller -> Client [label="HTTP 200 OK"];
+}

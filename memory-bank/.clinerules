@@ -1,0 +1,20 @@
+# CLI Rules
+
+## Project Preferences
+- **Framework**: Use NestJS best practices (Modules, Services, Controllers).
+- **Language**: TypeScript is strict. Use Interfaces/DTOs.
+- **Style**: Prettier and ESLint are configured; follow their rules.
+- **Testing**: Use Jest. Maintain high coverage.
+
+## Workflows
+- **Running Locally**: Use `docker-compose up --build` for the full stack or `npm run start:dev` for individual services if DB/MQ are running.
+- **New Features**:
+    - Define DTOs in `libs/common` first if shared.
+    - Update `API Gateway` logic if end-user facing.
+    - Implement Service logic.
+    - Update Tests.
+
+## Memory Bank Maintenance
+- **Review**: Check `activeContext.md` at the start of sessions.
+- **Update**: Update `progress.md` when features are completed.
+- **Refinement**: Update `systemPatterns.md` if architecture evolves (e.g., adding a new service).
