@@ -23,6 +23,10 @@ import { HttpExceptionFilter } from 'libs/common/interceptors/http-exception.int
           options: {
             urls: [configService.get<string>('RABBITMQ_URL')],
             queue: configService.get<string>('RABBITMQ_ORDER_QUEUE'),
+            maxConnectionAttempts: 5,
+            socketOptions: {
+              reconnectTimeInSeconds: 5,
+            },
           },
         }),
         inject: [ConfigService],

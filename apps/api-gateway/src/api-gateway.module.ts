@@ -4,7 +4,7 @@ import  {ConfigModule} from '@nestjs/config';
 @Module({
   imports: [OrderManagementModule, ConfigModule.forRoot({
     isGlobal: true,
-    envFilePath: ['.env'],
+    envFilePath: ['.env.development', '.env'],
   })],
   controllers: [],
   providers: [],

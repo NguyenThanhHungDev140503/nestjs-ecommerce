@@ -12,6 +12,10 @@ async function bootstrap() {
       options: {
         urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
         queue: process.env.RABBITMQ_ORDER_QUEUE || 'order-queue',
+        maxConnectionAttempts: 5,
+        socketOptions: {
+          reconnectTimeInSeconds: 5,
+        },
       },
     },
   );
