@@ -11,10 +11,10 @@
       let
         pkgs = import nixpkgs { inherit system; };
         
-        # Node.js 20 để tương thích với @types/node ^20.3.1
-        nodejs = pkgs.nodejs_20;
+        # Node.js 22
+        nodejs = pkgs.nodejs_22;
         
-        # Yarn với Node.js 20
+        # Yarn với Node.js 22
         yarn = pkgs.yarn.override { inherit nodejs; };
       in
       {

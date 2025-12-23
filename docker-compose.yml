@@ -9,7 +9,7 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-    command: npm run start:api-gateway # Adjust for your app's entry point
+    command: yarn start:api-gateway # Adjust for your app's entry point
     env_file:
       - .env.development # Load environment variables from the .env.development file
     depends_on:
@@ -23,7 +23,7 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-    command: npm run start:order-management
+    command: yarn start:order-management
     dns:
       - 8.8.8.8
     env_file:
@@ -39,7 +39,7 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-    command: npm run start:customer-service
+    command: yarn start:customer-service
     env_file:
       - .env.development
     depends_on:
@@ -53,7 +53,7 @@ services:
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
-    command: npm run start:inventory-service
+    command: yarn start:inventory-service
     env_file:
       - .env.development
     depends_on:
