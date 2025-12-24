@@ -19,7 +19,7 @@ export class OrderManagementController {
   @MessagePattern({ cmd: MESSAGE_PATTERNS.GET_ORDER_BY_ID })
   handleGetOrderById(orderId: string) {
     console.log('Fetch order by ID request received');
-    return this.orderManagementService.handleGetOrderById(orderId);
+    return this.orderManagementService.handleGetOrderById({ orderId });
   }
 
   @EventPattern({ cmd: EVENT_PATTERNS.CREATE_ORDER })
@@ -31,12 +31,12 @@ export class OrderManagementController {
   @MessagePattern({ cmd: MESSAGE_PATTERNS.UPDATE_ORDER })
   handleUpdateOrder(order: UpdateOrderDto) {
     console.log('Order update request received');
-    return this.orderManagementService.handleOrderUpdate(order);
+    return this.orderManagementService.handleUpdateOrder(order);
   }
 
   @MessagePattern({ cmd: MESSAGE_PATTERNS.DELETE_ORDER })
   handleDeleteOrder(orderId: string) {
     console.log('Order delete request received');
-    return this.orderManagementService.handleDeleteOrder(orderId);
+    return this.orderManagementService.handleDeleteOrder({ orderId });
   }
 }

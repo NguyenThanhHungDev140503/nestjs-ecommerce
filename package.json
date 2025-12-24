@@ -21,7 +21,12 @@
     "start:api-gateway": "nest start api-gateway",
     "start:order-management": "nest start order-management",
     "start:inventory-service": "nest start inventory-service",
-    "start:customer-service": "nest start customer-service"
+    "start:customer-service": "nest start customer-service",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:pull": "prisma db pull"
   },
   "dependencies": {
     "@faker-js/faker": "^9.3.0",
@@ -32,7 +37,6 @@
     "@nestjs/microservices": "^10.4.13",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^11.2.3",
-    "@nestjs/typeorm": "^10.0.2",
     "@prisma/client": "^7.2.0",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.5",
@@ -45,8 +49,7 @@
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.20"
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -71,6 +74,7 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.1.3"
   },
   "jest": {

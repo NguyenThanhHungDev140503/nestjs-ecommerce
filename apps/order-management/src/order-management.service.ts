@@ -4,167 +4,120 @@ import { MESSAGE_PATTERNS } from 'libs/common/constants/patterns';
 import { CUSTOMER_SERVICE, INVENTORY_SERVICE } from 'libs/common/constants/services';
 import { CreateOrderDto } from 'libs/common/dto/create-order.dto';
 import { UpdateOrderDto } from 'libs/common/dto/update-order.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
-import { Order } from './entities/order.entity';
-import { OrderLineItem } from './entities/order-line-item.entity';
 import { OrderStatus } from 'libs/common/constants/order-status';
 import { CustomerDetails } from 'libs/common/interfaces/customer.interface';
 import { InventoryItem } from 'libs/common/interfaces/inventory.interface';
 import { OrderIdDto } from 'libs/common/dto/order-id.dto';
+import { PrismaService } from 'libs/common/database/prisma.service';
+
 @Injectable()
 export class OrderManagementService {
   constructor(
     @Inject(CUSTOMER_SERVICE) private readonly customerClient: ClientProxy,
     @Inject(INVENTORY_SERVICE) private readonly inventoryClient: ClientProxy,
-    @InjectRepository(Order) private readonly orderRepository: Repository<Order>,
-    @InjectRepository(OrderLineItem) private readonly orderLineItemRepository: Repository<OrderLineItem>,
-    private readonly dataSource: DataSource,
+    private readonly prisma: PrismaService,
   ) {}
 
   async handleGetAllOrders(customerId: string) {
     console.log(`Fetching all orders for customer: ${customerId}`);
-
     try {
-      const orders = await this.orderRepository.find();
+      const orders = await this.prisma.order.findMany();
       console.log('Orders:', orders);
       return orders;
     } catch (error) {
-      console.error('Error fetching orders:', error.message);
-      throw new RpcException('Error fetching orders');
+      console.error('Error fetching orders:', error);
+      throw new RpcException('Failed to fetch orders');
     }
   }
 
-  async handleGetOrderById(orderId: string) {
-    console.log(`Fetching order by ID: ${orderId}`);
-
+  async handleGetOrderById(orderId: OrderIdDto) {
+    console.log(`Fetching order with ID: ${orderId.orderId}`);
     try {
-      const order = await this.orderRepository.findOne({ where: { id: orderId } });
-
-      if (!order) {
-        throw new RpcException(`Order with ID ${orderId} not found`);
-      }
-
-      console.log('Order:', order);
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId.orderId },
+        include: { line_items: true },
+      });
+      if (!order) throw new RpcException('Order not found');
       return order;
     } catch (error) {
-      console.error('Error fetching order:', error.message);
-      throw new RpcException('Error fetching order');
+      console.error('Error fetching order:', error);
+      throw new RpcException('Failed to fetch order');
     }
   }
 
   async handleCreateOrder(order: CreateOrderDto) {
-    console.log(`Received a new order - customer: ${order}`);
-
+    console.log('Creating order:', order);
     try {
-      const customerDetails:CustomerDetails = await this.customerClient.send(MESSAGE_PATTERNS.GET_CUSTOMER_DETAILS, order.customerId).toPromise();
+      const customerDetails: CustomerDetails = await this.customerClient
+        .send(MESSAGE_PATTERNS.GET_CUSTOMER_DETAILS, order.customerId)
+        .toPromise();
       console.log('Customer details:', customerDetails);
 
-      const inventoryDetails: InventoryItem[] = await this.inventoryClient.send(MESSAGE_PATTERNS.GET_INVENTORY_DETAILS, order.items).toPromise();
+      const inventoryDetails: InventoryItem[] = await this.inventoryClient
+        .send(MESSAGE_PATTERNS.GET_INVENTORY_DETAILS, order.items)
+        .toPromise();
       console.log('Inventory details:', inventoryDetails);
 
-      const lineItems: Partial<OrderLineItem>[] = inventoryDetails.map((inventoryItem: InventoryItem) => {
-        const { id, requested_quantity, unit_price } = inventoryItem;
-        return {
-          id,
-          quantity: requested_quantity,
-          unit_price: unit_price,
-        };
-      });
+      const lineItems = inventoryDetails.map((item) => ({
+        product_id: item.id,
+        quantity: item.requested_quantity,
+        unit_price: item.unit_price,
+      }));
 
-      const totalAmount = lineItems.reduce(
-        (total: number, item: { quantity: number; unit_price: number }) => total + item.quantity * item.unit_price,
+      const totalAmount = inventoryDetails.reduce(
+        (sum, item) => sum + item.unit_price * item.requested_quantity,
         0,
       );
 
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
-      try {
-        const savedOrder = await queryRunner.manager.save(Order, {
-          customer_id: customerDetails.id,
-          shipping_address: customerDetails.shipping_address,
+      const newOrder = await this.prisma.order.create({
+        data: {
+          customer_id: order.customerId,
+          shipping_address: order.shippingAddress,
           status: OrderStatus.PROCESSING,
           total_amount: totalAmount,
-        });
+          line_items: { create: lineItems },
+        },
+        include: { line_items: true },
+      });
 
-        console.log('Order saved:', savedOrder);
-
-        const orderLineItems = lineItems.map((item) => ({
-          order: savedOrder,
-          product_id: item.id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        }));
-
-        await queryRunner.manager.save(OrderLineItem, orderLineItems);
-
-        console.log('Order line items saved:', orderLineItems);
-
-        await queryRunner.commitTransaction();
-        console.log('Transaction committed successfully.');
-      } catch (error) {
-        console.error('Error during transaction:', error.message);
-        await queryRunner.rollbackTransaction();
-        throw new RpcException('Error creating order');
-      } finally {
-        await queryRunner.release();
-      }
+      console.log('Order created:', newOrder);
+      return newOrder;
     } catch (error) {
-      console.error('Error creating order:', error.message);
-      throw new RpcException('Error creating order');
+      console.error('Error creating order:', error);
+      throw new RpcException('Failed to create order');
     }
   }
 
-  async handleOrderUpdate(updateOrderDto: UpdateOrderDto) {
-    const { orderId } = updateOrderDto;
-    console.log(`Updating order - ID: ${orderId}, update: ${updateOrderDto}`);
-
+  async handleUpdateOrder(updateOrderDto: UpdateOrderDto) {
+    console.log('Updating order:', updateOrderDto);
     try {
-      const order = await this.orderRepository.findOne({ where: { id: orderId } });
-
-      if (!order) {
-        throw new RpcException(`Order with ID ${orderId} not found`);
-      }
-
-      if (updateOrderDto.status) {
-        order.status = updateOrderDto.status;
-      }
-
-      if (updateOrderDto.trackingNumber) {
-        order.tracking_number = updateOrderDto.trackingNumber;
-      }
-
-      if (updateOrderDto.trackingCompany) {
-        order.tracking_company = updateOrderDto.trackingCompany;
-      }
-
-      const updatedOrder = await this.orderRepository.save(order);
+      const updatedOrder = await this.prisma.order.update({
+        where: { id: updateOrderDto.orderId },
+        data: {
+          status: updateOrderDto.status,
+          tracking_number: updateOrderDto.trackingNumber,
+          tracking_company: updateOrderDto.trackingCompany,
+        },
+      });
       console.log('Order updated:', updatedOrder);
       return updatedOrder;
     } catch (error) {
-      console.error('Error updating order:', error.message);
-      throw new RpcException('Error updating order');
+      console.error('Error updating order:', error);
+      throw new RpcException('Failed to update order');
     }
   }
 
-  async handleDeleteOrder(orderId: string) {
-    console.log(`Deleting order - ID: ${orderId}`);
-
+  async handleDeleteOrder(orderId: OrderIdDto) {
+    console.log(`Deleting order with ID: ${orderId.orderId}`);
     try {
-      const order = await this.orderRepository.findOne({ where: { id: orderId } });
-
-      if (!order) {
-        throw new RpcException(`Order with ID ${orderId} not found`);
-      }
-
-      await this.orderRepository.remove(order);
-      console.log(`Order with ID ${orderId} deleted successfully.`);
-      return { message: `Order with ID ${orderId} deleted successfully.` };
+      await this.prisma.order.delete({
+        where: { id: orderId.orderId },
+      });
+      return { message: 'Order deleted successfully' };
     } catch (error) {
-      console.error('Error deleting order:', error.message);
-      throw new RpcException('Error deleting order');
+      console.error('Error deleting order:', error);
+      throw new RpcException('Failed to delete order');
     }
   }
 }
+

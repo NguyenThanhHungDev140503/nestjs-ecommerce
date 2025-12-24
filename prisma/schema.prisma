@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PROCESSING
+  CANCELLED
+  DELIVERED
+}
+
+model Order {
+  id               String          @id @default(uuid())
+  status           OrderStatus     @default(PROCESSING)
+  shipping_address String
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  tracking_company String?
+  tracking_number  String?
+  customer_id      String
+  total_amount     Decimal
+  line_items       OrderLineItem[]
+
+  @@map("order")
+}
+
+model Product {
+  id                 String          @id @default(uuid())
+  name               String
+  unit_price         Decimal
+  available_quantity Decimal
+  description        String?         @db.Text
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+  line_items         OrderLineItem[]
+
+  @@map("product")
+}
+
+model OrderLineItem {
+  id         String   @id @default(uuid())
+  order_id   String
+  product_id String
+  quantity   Int
+  unit_price Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order   Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id])
+
+  @@map("order_line_item")
+}
+
+model Customer {
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  phone            String?
+  shipping_address String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("customer")
+}
+
