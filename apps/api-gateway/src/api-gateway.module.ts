@@ -1,11 +1,21 @@
 import { Module } from '@nestjs/common';
 import { OrderManagementModule } from './order-management/order-management.module';
-import  {ConfigModule} from '@nestjs/config';
+import { CustomerModule } from './customer/customer.module';
+import { ProductModule } from './product/product.module';
+import { ConfigModule } from '@nestjs/config';
+import { RedisCacheModule } from 'libs/common/src/cache';
+
 @Module({
-  imports: [OrderManagementModule, ConfigModule.forRoot({
-    isGlobal: true,
-    envFilePath: ['.env.development', '.env'],
-  })],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.development', '.env'],
+    }),
+    RedisCacheModule,
+    OrderManagementModule,
+    CustomerModule,
+    ProductModule,
+  ],
   controllers: [],
   providers: [],
 })

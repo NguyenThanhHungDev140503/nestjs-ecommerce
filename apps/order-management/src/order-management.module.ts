@@ -5,6 +5,7 @@ import { OrderManagementController } from './order-management.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CUSTOMER_SERVICE, INVENTORY_SERVICE } from 'libs/common/constants/services';
 import { PrismaModule } from 'libs/common/database/prisma.module';
+import { RedisCacheModule } from 'libs/common/src/cache';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { PrismaModule } from 'libs/common/database/prisma.module';
       },
     ]),
     PrismaModule,
+    RedisCacheModule,
   ],
   controllers: [OrderManagementController],
   providers: [OrderManagementService],

@@ -9,11 +9,30 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================
+// ENUMS
+// ============================================
+
 enum OrderStatus {
   PROCESSING
   CANCELLED
   DELIVERED
 }
+
+enum CustomerRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ============================================
+// ORDER DOMAIN
+// ============================================
 
 model Order {
   id               String          @id @default(uuid())
@@ -26,21 +45,9 @@ model Order {
   customer_id      String
   total_amount     Decimal
   line_items       OrderLineItem[]
+  customer         Customer        @relation(fields: [customer_id], references: [id])
 
   @@map("order")
-}
-
-model Product {
-  id                 String          @id @default(uuid())
-  name               String
-  unit_price         Decimal
-  available_quantity Decimal
-  description        String?         @db.Text
-  created_at         DateTime        @default(now())
-  updated_at         DateTime        @updatedAt
-  line_items         OrderLineItem[]
-
-  @@map("product")
 }
 
 model OrderLineItem {
@@ -58,15 +65,139 @@ model OrderLineItem {
   @@map("order_line_item")
 }
 
+// ============================================
+// CUSTOMER DOMAIN
+// ============================================
+
 model Customer {
-  id               String   @id @default(uuid())
+  id               String         @id @default(uuid())
   name             String
-  email            String   @unique
+  email            String         @unique
+  password_hash    String?
   phone            String?
   shipping_address String?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  role             CustomerRole   @default(CUSTOMER)
+  status           CustomerStatus @default(ACTIVE)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  orders           Order[]
 
+  @@index([email])
+  @@index([status])
   @@map("customer")
 }
 
+// ============================================
+// INVENTORY/PRODUCT DOMAIN
+// ============================================
+
+model Product {
+  id                  String          @id @default(uuid())
+  name                String
+  unit_price          Decimal         @db.Decimal(10, 2)
+  available_quantity  Int             @default(0)
+  reserved_quantity   Int             @default(0)
+  low_stock_threshold Int             @default(10)
+  description         String?         @db.Text
+  is_active           Boolean         @default(true)
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
+  line_items          OrderLineItem[]
+
+  @@index([name])
+  @@index([is_active])
+  @@map("product")
+}
+
+// ============================================
+// STOCK RESERVATION (for tracking reservations)
+// ============================================
+
+model StockReservation {
+  id         String                 @id @default(uuid())
+  product_id String
+  order_id   String?
+  quantity   Int
+  status     StockReservationStatus @default(PENDING)
+  expires_at DateTime?
+  created_at DateTime               @default(now())
+  updated_at DateTime               @updatedAt
+
+  @@index([product_id])
+  @@index([order_id])
+  @@index([status])
+  @@map("stock_reservation")
+}
+
+enum StockReservationStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+  EXPIRED
+}
+
+// ============================================
+// NOTIFICATION DOMAIN
+// ============================================
+
+// Notification Template
+model NotificationTemplate {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  workflowId  String   @map("workflow_id")
+  variables   Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([key])
+  @@index([active])
+  @@map("notification_templates")
+}
+
+// Notification Log
+model NotificationLog {
+  id          String   @id @default(uuid())
+  templateKey String   @map("template_key")
+  channel     String // email, sms, push, in_app
+  status      String // pending, sent, delivered, failed
+  recipient   String
+  payload     Json?
+  error       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([recipient])
+  @@index([templateKey])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notification_logs")
+}
+
+// User Notification Preferences
+model NotificationPreference {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  preferences Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+// Notification Provider Configuration
+model NotificationProvider {
+  id          String   @id @default(uuid())
+  provider    String
+  name        String
+  isActive    Boolean  @default(true) @map("is_active")
+  credentials Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, name])
+  @@map("notification_providers")
+}

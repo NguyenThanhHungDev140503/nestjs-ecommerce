@@ -32,6 +32,8 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('Orders', 'Quản lý đơn hàng')
+    .addTag('Customers', 'Quản lý khách hàng')
+    .addTag('Products', 'Quản lý sản phẩm và tồn kho')
     .addTag('Health', 'Kiểm tra trạng thái hệ thống')
     .addServer('http://localhost:3000', 'Development Server')
     .addServer('https://api.example.com', 'Production Server')

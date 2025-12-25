@@ -60,6 +60,106 @@ services:
       rmq:
         condition: service_healthy
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification-service
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: yarn start:notification-service
+    env_file:
+      - .env.development
+    depends_on:
+      rmq:
+        condition: service_healthy
+      novu-api:
+        condition: service_started
+
+  # Novu Self-Hosted Services
+  novu-api:
+    image: ghcr.io/novuhq/novu/api:0.23.0
+    container_name: novu-api
+    environment:
+      NODE_ENV: production
+      API_ROOT_URL: http://localhost:3004
+      DISABLE_USER_REGISTRATION: 'false'
+      PORT: 3000
+      FRONT_BASE_URL: http://localhost:4200
+      MONGO_URL: mongodb://mongo:27017/novu
+      MONGO_MIN_POOL_SIZE: 10
+      MONGO_MAX_POOL_SIZE: 500
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB_INDEX: 2
+      JWT_SECRET: ${NOVU_JWT_SECRET:-your-novu-jwt-secret-change-this}
+      STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY:-12345678901234567890123456789012}
+      S3_LOCAL_STACK: ''
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-novu-bucket}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      STORAGE_SERVICE: ${STORAGE_SERVICE:-local}
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - '3004:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  novu-worker:
+    image: ghcr.io/novuhq/novu/worker:0.23.0
+    container_name: novu-worker
+    environment:
+      NODE_ENV: production
+      MONGO_URL: mongodb://mongo:27017/novu
+      MONGO_MIN_POOL_SIZE: 10
+      MONGO_MAX_POOL_SIZE: 500
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB_INDEX: 2
+      JWT_SECRET: ${NOVU_JWT_SECRET:-your-novu-jwt-secret-change-this}
+      STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY:-12345678901234567890123456789012}
+      S3_LOCAL_STACK: ${S3_LOCAL_STACK:-localhost:4566}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-novu-bucket}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      STORAGE_SERVICE: ${STORAGE_SERVICE:-local}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  novu-web:
+    image: ghcr.io/novuhq/novu/web:0.23.0
+    container_name: novu-web
+    ports:
+      - '4200:4200'
+    environment:
+      REACT_APP_API_URL: http://localhost:3004
+      REACT_APP_WS_URL: http://localhost:3002
+      REACT_APP_ENVIRONMENT: production
+    depends_on:
+      - novu-api
+
+  mongo:
+    image: mongo:7
+    container_name: novu-mongo
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - '27017:27017'
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   rmq:
     image: rabbitmq:3-management
     ports:
@@ -74,3 +174,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ 'CMD', 'redis-cli', 'ping' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  redis_data:
+  mongo_data:

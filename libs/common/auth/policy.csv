@@ -1,0 +1,32 @@
+# Policy definitions for PBAC
+# Format: p, subject, object, action
+
+# Customer role permissions
+p, customer, customer, read:own
+p, customer, customer, update:own
+p, customer, order, create:own
+p, customer, order, read:own
+p, customer, product, read:any
+p, customer, inventory, read:any
+
+# Admin role permissions - full access
+p, admin, customer, read:any
+p, admin, customer, create:any
+p, admin, customer, update:any
+p, admin, customer, delete:any
+p, admin, order, read:any
+p, admin, order, create:any
+p, admin, order, update:any
+p, admin, order, delete:any
+p, admin, product, read:any
+p, admin, product, create:any
+p, admin, product, update:any
+p, admin, product, delete:any
+p, admin, inventory, read:any
+p, admin, inventory, create:any
+p, admin, inventory, update:any
+p, admin, inventory, delete:any
+
+# Role inheritance
+# g, user_role, parent_role
+
