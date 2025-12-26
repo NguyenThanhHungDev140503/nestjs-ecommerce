@@ -1,0 +1,62 @@
+{
+  "name": "customer-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/customer-service/src",
+  "tags": ["scope:customer", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/customer-service",
+        "main": "apps/customer-service/src/main.ts",
+        "tsConfig": "apps/customer-service/tsconfig.app.json",
+        "assets": [],
+        "generatePackageJson": true,
+        "externalDependencies": "all"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "inspect": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "customer-service:build:development",
+        "watch": true
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "customer-service:build:production"
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/customer-service"],
+      "options": {
+        "jestConfig": "apps/customer-service/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/customer-service/**/*.ts"]
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "inventory-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/inventory-service/src",
+  "tags": ["scope:inventory", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/inventory-service",
+        "main": "apps/inventory-service/src/main.ts",
+        "tsConfig": "apps/inventory-service/tsconfig.app.json",
+        "assets": [],
+        "generatePackageJson": true,
+        "externalDependencies": "all"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "inspect": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "inventory-service:build:development",
+        "watch": true
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "inventory-service:build:production"
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/inventory-service"],
+      "options": {
+        "jestConfig": "apps/inventory-service/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/inventory-service/**/*.ts"]
+      }
+    }
+  }
+}

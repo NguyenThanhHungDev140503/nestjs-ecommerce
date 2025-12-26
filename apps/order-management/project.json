@@ -1,0 +1,62 @@
+{
+  "name": "order-management",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/order-management/src",
+  "tags": ["scope:order", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/order-management",
+        "main": "apps/order-management/src/main.ts",
+        "tsConfig": "apps/order-management/tsconfig.app.json",
+        "assets": [],
+        "generatePackageJson": true,
+        "externalDependencies": "all"
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "inspect": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "order-management:build:development",
+        "watch": true
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "order-management:build:production"
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/apps/order-management"],
+      "options": {
+        "jestConfig": "apps/order-management/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/order-management/**/*.ts"]
+      }
+    }
+  }
+}
